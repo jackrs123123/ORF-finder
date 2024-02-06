@@ -1,0 +1,186 @@
+"""
+Project 01 Template File
+
+CS/BIOS 112 - Project 01
+
+Finds all ORFs in a file containing a DNA sequence and gives specific information in the form of lists with length, GC content, and the ORF string.
+
+@author:    Joaquin RS
+UIC NetID:  jrami86
+Due Date:   10/10/2023
+"""
+
+
+# The following function should NOT be modified!!
+def read_one_seq_fasta(fasta_file):
+    """Read a FASTA file that contains one sequence."""
+    seq = ''
+    with open(fasta_file, 'r') as f:
+        f.readline()  # by pass description in first line of data file
+        for line in f.readlines():
+            seq = seq + line[:-1]
+    return seq
+# The above function should NOT be modified!!!
+
+
+
+def gc_content(seq):
+    '''
+    Similar to a function written in Lab 3. Takes DNA sequences and counts the amount of 'G' and 'C' exist and divides that number by the length of the sequence.
+    '''
+    gc_amount = seq.count('G') + seq.count('C')
+    return gc_amount / len(seq)
+
+
+
+# Tests for gc_content function. Should print True in all cases.
+print('\ngc_content Tests')
+print(gc_content('ATGTGAA') == 0.2857142857142857)
+print(gc_content('ATGAGATAAG') == 0.3)
+
+
+
+def get_orf(seq):
+    '''
+    Detects if sequence is an ORF if first three characters are 'ATG' and has one of the stop codons. Similar to Lab 5.
+    '''
+    stop_codons = ['TAG', 'TAA', 'TGA']
+    if seq[0:3] == 'ATG':
+        i = 0
+        while i < len(seq):
+            if seq[i:i+3] in stop_codons:
+                return seq[:i]
+            i += 3
+        return seq
+    else:
+        return ''
+    
+
+
+# Tests for get_orf function. Should print True in all cases.
+print('\nget_orf Tests')
+print(get_orf('ATGTGAA') == 'ATG')
+print(get_orf('ATGAGATAAG') == 'ATGAGA')
+print(get_orf('ATGAGATAGG') == 'ATGAGA')
+print(get_orf('ATGAGATGAGGGTAA') == 'ATGAGA')
+print(get_orf('ATGAAATT') == 'ATGAAATT')
+
+
+
+def one_frame(seq):
+    '''
+    Returns all ORF's found in a DNA sequence.
+    '''
+    start_codon = 'ATG'
+    orf_list = []
+    i2 = 0
+    while i2 < len(seq):
+        if seq[i2:i2+3] == start_codon: #in only works for list
+            orf = get_orf(seq[i2:])
+            orf_list.append(orf)
+            i2 += len(orf)
+        else:
+            i2 += 3
+    return orf_list
+
+
+
+# Tests for one_frame function. Should print True in all cases.
+print('\none_frame')
+print(one_frame('ATGTGAA') == ['ATG'])
+print(one_frame('ATGAGATAAG') == ['ATGAGA'])
+print(one_frame('ATGAGATAGG') == ['ATGAGA'])
+print(one_frame('ATGAGATGAGGGTAA') == ['ATGAGA'])
+print(one_frame('ATGAAATT') == ['ATGAAATT'])
+print(one_frame('ATGAGATGAACCATGGGGTAA') == ['ATGAGA', 'ATGGGG'])
+
+
+
+def forward_frames(seq):
+    '''Returns all ORF's in list starting from three different bases.'''
+    list1 = one_frame(seq)
+    list2 = one_frame(seq[1:])
+    list3 = one_frame(seq[2:])
+    return list1 + list2 + list3
+
+
+
+# Tests for forward_frames function. Should print True in all cases.
+print('\nforward_frames')
+print(forward_frames('ATGAGATAAG') == ['ATGAGA'])
+print(forward_frames('ATGAGATGAGGGTAA') == ['ATGAGA', 'ATGAGGGTAA'])
+print(forward_frames('ATGAAATT') == ['ATGAAATT'])
+print(forward_frames('ATGAGATGACACCATGGGGTAA') == ['ATGAGA', 'ATGGGG', 'ATGACACCATGGGGTAA'])
+
+
+
+def reverse_complement(seq):
+    '''Reverses all DNA sequences and compliments A with T and G with C (vice versa).'''
+    reversed_seq = seq[::-1]
+    answer = ''
+    for pos in reversed_seq:
+        if pos == 'A':
+            answer += 'T'
+        elif pos == 'T':
+            answer += 'A'
+        elif pos == 'G':
+            answer += 'C'
+        else:
+            answer += 'G'
+    return answer
+
+
+
+# Tests for reverse_complement function. Should print True.
+print ("\nreverse_compliment")
+print (reverse_complement('ATGCTTG') == 'CAAGCAT')
+print (reverse_complement('AAAGGG') == 'CCCTTT')
+print (reverse_complement('TTTCCC') == 'GGGAAA')
+print (reverse_complement('ATCGATCAGTCCTAGCATCG') == 'CGATGCTAGGACTGATCGAT')
+
+
+
+def gene_finder(fasta_file, min_len, min_gc):
+    '''Builds a list of lists for the length, GC ratio, and the ORF.'''
+    my_seq = read_one_seq_fasta(fasta_file)
+    list_orf = forward_frames(my_seq)
+    reverse = reverse_complement(my_seq)
+    list_orf2 = forward_frames(reverse)
+    combined = list_orf + list_orf2
+    final = []
+    for pos in combined:
+        length = len(pos)
+        GC = gc_content(pos)
+        if length >= min_len:
+            if GC >= min_gc:
+                final.append([length, GC, pos])
+    return final
+
+
+
+# Tests for gene_finder function. Should print True.
+print('\ngene_finder')
+calculated_result = gene_finder('gene_finder_test.fasta', 6, 0.45)
+desired_result = [[6, 0.6666666666666666, 'ATGCCC'], [9, 0.7777777777777778, 'ATGCCCCGG']]
+print( calculated_result == desired_result)
+
+orf_list = gene_finder('human_chr9_segment.fasta', 550, 0.45)
+print (len(orf_list) == 5)
+
+# viewing the results of the gene_finder( ) calculations
+orf_list = gene_finder('gene_finder_test.fasta', 6, 0.45)
+print (orf_list)
+
+gene= gene_finder('X73525.fasta', 100, 0.40)
+print(len(gene))
+
+
+"""
+Identify ORFs in the provided X73525.fasta file:
+ATGTGTCGGCGTCGTGACTTGTCCAAAAACGCGGCTTACGCTTTTCAGTACATCGATTGCCGGGTAATGTCCCTGCCCGGCCAGCTTTCTGCTCAGATACAGGTGACCGTCAAGGATAGAGCGAATTTCATCCGCCATCGGGTCCGCCTCTTCCTCGCTTTCCAGCAGTACCGTATAAAAGGCAGTAATGCTTCCCTCGCTGGTCGCCCCTGGGCGTTCCAGCAAGCGGGGCAAATTATCGAATACGGAGGCGGGATAACCTCGACGAGCCGGACGCTCTCCCGACGCCAGTGCCACGTCTCGCAAAGCACGCGCATAACGGGTCATGGAATCGATAAAAAGCACGACCCGTTTTCCCTGGTCGCGAAAATATTCCGCTACGGTTGTCGCCAGTTGCGCCGCATTGCAGCGATCGACCGAGGGGAAATCGGAAGTGGCAAAAACCAGCACGCATTTTTCTTTCTTATGCGAAGCGCGCAACATATCCACGAATTCAGTGACCTCACGGCCTCGTTCACCGATAAGACCGATAACAAAGACATCCGCCTCCGTTTGCTCGATCAGCATATGCATCAGCATGGTCTTACCGCATCCTGCGGAGGCAAAAATGCCCATTCGCTGGCCTACGCCACAGGTCAA
+
+  a. This gene (human chromosome X partial.fasta) is relevant since it's the tissue expression of the SARS-CoV-2 cell receptor.
+  b. Since this gene is found in the X chromosome, I have it since I also have the X chromosome.
+  c. Calling gene_finder with the X73525.fasta file with a minimum length of 100 and GC ratio of 0.40, we get many ORFs that would be hard to count by hand.
+  d. The function of the ORF from the human chromosome X partial.fasta is to be a receptor of SARS-CoV-2.
+"""
